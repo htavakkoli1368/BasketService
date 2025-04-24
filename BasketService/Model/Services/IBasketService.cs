@@ -11,6 +11,8 @@ namespace BasketService.Model.Services
         BasketDto GetBasket(string UserId);
         void AddItemsToBasket(AddItemsToBasketDto basketItems);
         void RemoveItemsFromBasket(Guid itemId);
+        void SetItemQuantity(Guid itemId,int quantity);
+        void TransferBasket(string AnonymousId, string UserId);
     }
 
     public class BasketServices:IBasketService
@@ -106,9 +108,49 @@ namespace BasketService.Model.Services
             var item = databaseContext.BasketItems.SingleOrDefault(c => c.Id == itemId);
 
             if (item == null)
-                throw new Exception("basket not found");
+                throw new Exception("item not found");
             databaseContext.BasketItems.Remove(item);
             databaseContext.SaveChanges();
+        }
+
+        public void SetItemQuantity(Guid itemId, int quantity)
+        {
+            var item = databaseContext.BasketItems.SingleOrDefault(c => c.Id == itemId);
+
+            if (item == null)
+                throw new Exception("basket not found");
+            item.SetQuantity(quantity);
+            databaseContext.SaveChanges();
+        }
+
+        public void TransferBasket(string AnonymousId, string UserId)
+        {
+            var anonymousBasket = databaseContext.Basket
+                       .Include(p => p.Items)
+                       .SingleOrDefault(c => c.UserId == AnonymousId);
+            if (anonymousBasket == null) return;
+            var userBasket = databaseContext.Basket.SingleOrDefault(c => c.UserId == UserId);
+            if (userBasket == null)
+            {
+                userBasket = new Basket(UserId);
+                databaseContext.Basket.Add(userBasket);
+            }
+
+            foreach (var item in anonymousBasket.Items)
+            {
+                userBasket.Items.Add(new BasketItems
+                {
+                    ImageUrl=item.ImageUrl,
+                    ProductName=item.ProductName,
+                    Quantity=item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    ProductId=item.ProductId                    
+                });                
+            }
+            databaseContext.Basket.Remove(anonymousBasket);
+            databaseContext.SaveChanges();
+
+
         }
     }
 
