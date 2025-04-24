@@ -19,7 +19,7 @@ namespace BasketService.Controllers
         [HttpGet]
         public IActionResult Get(string userId)
         {
-            var basket = basketService.GetBasket(userId);
+            var basket = basketService.GetOrCreateBasketForUser(userId);
             return Ok(basket);
         }
 
