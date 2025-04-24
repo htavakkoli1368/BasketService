@@ -1,6 +1,7 @@
 
 using BasketService.Infrastructure.Context;
 using BasketService.Infrastructure.MappingProfile;
+using BasketService.Model.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BasketService
@@ -19,6 +20,7 @@ namespace BasketService
             builder.Services.AddSwaggerGen();
             builder.Services.AddDbContext<BasketDatabaseContext>(p => p.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddAutoMapper(typeof(BasketMappingProfile));
+            builder.Services.AddTransient<IBasketService,BasketServices>();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
