@@ -1,4 +1,5 @@
-﻿using BasketService.Infrastructure.Context;
+﻿using AutoMapper;
+using BasketService.Infrastructure.Context;
 using BasketService.Model.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,15 +8,20 @@ namespace BasketService.Model.Services
     public interface IBasketService
     {
         BasketDto GetOrCreateBasketForUser(string UserId);
+        BasketDto GetBasket(string UserId);
+        void AddItemsToBasket(AddItemsToBasketDto basketItems);
+        void RemoveItemsFromBasket(Guid itemId);
     }
 
     public class BasketServices:IBasketService
     {
         private readonly BasketDatabaseContext databaseContext;
+        private readonly IMapper mapper;
 
-        public BasketServices(BasketDatabaseContext databaseContext)
+        public BasketServices(BasketDatabaseContext databaseContext,IMapper mapper)
         {
             this.databaseContext = databaseContext;
+            this.mapper = mapper;
         }
 
         public BasketDto GetOrCreateBasketForUser(string UserId)
@@ -41,8 +47,7 @@ namespace BasketService.Model.Services
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice
                     
-                } ).ToList(),
-                 
+                } ).ToList(),                 
             };
         }
 
@@ -56,6 +61,54 @@ namespace BasketService.Model.Services
                 UserId = basket.UserId,
                 Id= basket.Id
             };
+        }
+
+        public BasketDto GetBasket(string UserId)
+        {
+            var basket = databaseContext.Basket
+                         .Include(p => p.Items)
+                         .SingleOrDefault(c => c.UserId == UserId);
+            if (basket == null)
+                return null;
+            return new BasketDto
+            {
+                Id = basket.Id,
+                UserId = basket.UserId,
+                Items = basket.Items.Select(item => new BasketItemsDto
+                {
+                    Id = item.Id,
+                    ImageUrl = item.ImageUrl,
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice
+
+                }).ToList(),
+            };
+        }
+
+        public void AddItemsToBasket(AddItemsToBasketDto basketItems)
+        {
+            var basket = databaseContext.Basket.FirstOrDefault(c=>c.Id==basketItems.BasketId);
+
+            if (basket == null)
+                throw new Exception("basket not found");
+
+            var basketItem = mapper.Map<BasketItems>(basketItems);
+
+            basket.Items.Add(basketItem);
+            databaseContext.SaveChanges();
+
+        }
+
+        public void RemoveItemsFromBasket(Guid itemId)
+        {
+            var item = databaseContext.BasketItems.SingleOrDefault(c => c.Id == itemId);
+
+            if (item == null)
+                throw new Exception("basket not found");
+            databaseContext.BasketItems.Remove(item);
+            databaseContext.SaveChanges();
         }
     }
 
@@ -86,6 +139,19 @@ namespace BasketService.Model.Services
         public int UnitPrice { get; set; }
         public int Quantity { get; set; }
         public string ImageUrl { get; set; }
+     
+
+    }
+    public class AddItemsToBasketDto
+    {
+        public Guid BasketId { get; set; }
+        public Guid ProductId { get; set; }
+        public string? ProductName { get; set; }
+        public int UnitPrice { get; set; }
+        public int Quantity { get; set; }
+        public string ImageUrl { get; set; }
+
+        
      
 
     }
